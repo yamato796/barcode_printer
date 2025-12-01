@@ -1,0 +1,3 @@
+# Set permissions to let anyone use barcode scanner
+SUBSYSTEM=="usb", ATTR{idVendor}=="24ea", ATTR{idProduct}=="0197", MODE="666"
+
