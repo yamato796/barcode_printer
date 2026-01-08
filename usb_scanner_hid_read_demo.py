@@ -118,6 +118,7 @@ dev.set_configuration()
 
 # get an endpoint instance
 cfg = dev.get_active_configuration()
+#print(cfg)
 intf = cfg[(0,0)]
 
 ep = usb.util.find_descriptor(
@@ -127,7 +128,7 @@ ep = usb.util.find_descriptor(
     lambda e: \
         usb.util.endpoint_direction(e.bEndpointAddress) == \
         usb.util.ENDPOINT_IN)
-
+print(ep)
 assert ep is not None, "Endpoint for USB device not found. Something is wrong."
 
 # Loop through a series of 8-byte transactions and convert each to an
@@ -143,20 +144,24 @@ with open(filename, 'r') as f:
 while True:
     try:
         # Wait up to 0.5 seconds for data. 500 = 0.5 second timeout.
-        data = ep.read(1000, 500) 
-        #print(data)
-        current_timestamp = time.time()
-        ch = hid2ascii(data).rstrip('\n')
-        result.append({"Barcode":f"{ch}","Time":f"{current_timestamp}"})
-        print(ch)
+        print('waitdata') 
+        data = ep.read(1000, 1000)
+        if data is not None:
+            print(data)
+            current_timestamp = time.time()
+            ch = hid2ascii(data).rstrip('\n')
+            result.append({"Barcode":f"{ch}","Time":f"{current_timestamp}"})
+            print(ch)
 
-        my_code = Code128(ch, writer=ImageWriter())        
-        my_code.save(f"code_{int(current_timestamp)}")
-
-        with open(filename, 'w') as f:
-            json.dump(result, f, indent=4) # indent=4 for pretty-printing
-            print(f"Data successfully written to {filename}")
-        #line += ch
+            my_code = Code128(ch, writer=ImageWriter())        
+            my_code.save(f"code_{int(current_timestamp)}")
+    
+            with open(filename, 'w') as f:
+                json.dump(result, f, indent=4) # indent=4 for pretty-printing
+                print(f"Data successfully written to {filename}")
+            #line += ch
+        else:
+            print('no data')
     except KeyboardInterrupt:
         print("Stopping program")
         dev.reset()
