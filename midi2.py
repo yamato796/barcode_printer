@@ -173,7 +173,7 @@ def barcode_ascii_to_midi(
     notes_to_midi_chord_file(notes, out_path, bpm=bpm, program=program)
 
 def play_with_fluidsynth(mid_path: str, sf2_path: str = "/usr/share/sounds/sf2/FluidR3_GM.sf2"):
-    subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-g", "1.0", sf2_path, mid_path], check=True)
+    subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=hw:1", "-g", "1.0", sf2_path, mid_path], check=True)
 
 if __name__ == "__main__":
     # 把你那串 ASCII 直接貼在這裡
