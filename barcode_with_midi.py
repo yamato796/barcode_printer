@@ -192,7 +192,10 @@ if __name__ == "__main__":
     #barcode_ascii = "XXXXJ102800309"
     while(True):
         #ch="Test Barcode"
+        ch = ""
         ch = input('scan barcode\n')
+        if ch=="":
+            continue
         print(f"{ch}")
         current_timestamp = time.time()
         filename = f"code_{int(current_timestamp)}"
