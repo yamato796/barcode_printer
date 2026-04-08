@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=Barcode Printer
-Exec=/placeholder/launch.sh
-Path=/placeholder
+Exec=/home/pi/barcode_project/launch.sh
+Path=/home/pi/barcode_project
 Icon=utilities-terminal
 Terminal=false
 Categories=Utility;
