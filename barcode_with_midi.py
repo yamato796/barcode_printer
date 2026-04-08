@@ -216,7 +216,9 @@ def init_display():
     """初始化 pygame 全螢幕視窗（在主執行緒呼叫一次）。"""
     global _screen, _screen_size
     os.environ.setdefault("SDL_VIDEODRIVER", "x11")   # RPi 可改 "fbdev" 若無桌面
-    pygame.init()
+    os.environ["SDL_AUDIODRIVER"] = "dummy"           # 不讓 pygame 佔用音訊裝置，讓 fluidsynth 可以用 ALSA
+    pygame.display.init()
+    pygame.font.init()
     info = pygame.display.Info()
     _screen_size = (info.current_w, info.current_h)
     _screen = pygame.display.set_mode(_screen_size, pygame.FULLSCREEN | pygame.NOFRAME)
