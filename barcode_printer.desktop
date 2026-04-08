@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Barcode Printer
+Comment=掃描條碼並播放音樂
+Exec=/home/pi/barcode_project/launch.sh
+Icon=utilities-terminal
+Terminal=false
+Categories=Utility;
+StartupNotify=false
