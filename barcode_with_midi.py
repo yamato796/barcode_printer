@@ -8,6 +8,23 @@ import subprocess
 import hashlib
 from barcode import Code128
 from barcode.writer import ImageWriter
+from PIL import Image
+import os
+
+# ─────────────────────────────────────────────
+#  顯示設定（依實際情況調整）
+# ─────────────────────────────────────────────
+TEMPLATE_PATH = "./IMG_0114.PNG"       # 背景模板圖片路徑
+
+# 條碼要貼入模板的位置與大小（像素）
+# (x, y) 為左上角，width/height 為縮放後的條碼尺寸
+BARCODE_X      = 36
+BARCODE_Y      = 774
+BARCODE_WIDTH  = 860
+BARCODE_HEIGHT = 230
+
+DISPLAY_SECONDS = 10   # 每張圖顯示幾秒（0 = 一直顯示到下一張）
+# ─────────────────────────────────────────────
 
 
 
@@ -167,7 +184,7 @@ def barcode_ascii_to_midi(
     program: int = 0,
 ) -> None:
     
-    scale, bpm, base_note, unit_beats, program, chord_duration = params_from_text(ch)
+    scale, bpm, base_note, unit_beats, program, chord_duration = params_from_text(barcode_ascii)
 
     notes = ascii_to_notes(
         barcode_ascii=barcode_ascii,
@@ -186,32 +203,146 @@ def play_with_fluidsynth(mid_path: str, sf2_path: str = "/usr/share/sounds/sf2/F
     #subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=hw:1", "-g", "1.0", sf2_path, mid_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-g", "1.0", sf2_path, mid_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+# ─────────────────────────────────────────────
+#  全螢幕顯示
+# ─────────────────────────────────────────────
+
+# 全域 pygame surface（主執行緒持有）
+_screen      = None
+_screen_size = (0, 0)
+
+def init_display():
+    """初始化 pygame 全螢幕視窗（在主執行緒呼叫一次）。"""
+    global _screen, _screen_size
+    os.environ.setdefault("SDL_VIDEODRIVER", "x11")   # RPi 可改 "fbdev" 若無桌面
+    pygame.init()
+    info = pygame.display.Info()
+    _screen_size = (info.current_w, info.current_h)
+    _screen = pygame.display.set_mode(_screen_size, pygame.FULLSCREEN | pygame.NOFRAME)
+    pygame.display.set_caption("Barcode Display")
+    pygame.mouse.set_visible(False)
+    # 先填白色底，避免初始黑屏
+    _screen.fill((255, 255, 255))
+    pygame.display.flip()
+    # 開機畫面：若模板存在就先顯示
+    if os.path.exists(TEMPLATE_PATH):
+        show_image_on_screen(TEMPLATE_PATH)
+
+
+def composite_barcode(barcode_png: str) -> str:
+    """
+    把條碼圖貼入模板，回傳合成後的暫存檔路徑。
+    若模板不存在，直接回傳原始條碼路徑。
+    """
+    if not os.path.exists(TEMPLATE_PATH):
+        print(f"[警告] 找不到模板 {TEMPLATE_PATH}，直接顯示條碼。")
+        return barcode_png
+
+    template_rgba = Image.open(TEMPLATE_PATH).convert("RGBA")
+    # 先把模板合成到白色背景（避免透明通道變黑）
+    bg = Image.new("RGB", template_rgba.size, (255, 255, 255))
+    bg.paste(template_rgba, mask=template_rgba.split()[3])
+
+    barcode = Image.open(barcode_png).convert("RGB")
+    barcode = barcode.resize((BARCODE_WIDTH, BARCODE_HEIGHT), Image.LANCZOS)
+
+    bg.paste(barcode, (BARCODE_X, BARCODE_Y))
+
+    out_path = barcode_png.replace(".png", "_display.png")
+    bg.save(out_path)
+    return out_path
+
+
+def show_image_on_screen(image_path: str):
+    """把圖片縮放至全螢幕並顯示（主執行緒呼叫）。"""
+    global _screen, _screen_size
+    if _screen is None:
+        return
+    try:
+        img = pygame.image.load(image_path)
+        img = pygame.transform.scale(img, _screen_size)
+        _screen.blit(img, (0, 0))
+        pygame.display.flip()
+    except Exception as e:
+        print(f"[顯示錯誤] {e}")
+
+
+def pump_events():
+    """清空 pygame 事件佇列，避免視窗被系統標記為無回應。"""
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+            raise KeyboardInterrupt
+
+
+def read_barcode_from_events() -> str:
+    """
+    透過 pygame 事件佇列收集條碼器鍵盤輸入，直到收到 Enter 為止。
+    條碼器掃描後會自動送出 Enter，所以這個函式會阻塞直到掃描完成。
+    """
+    text = ""
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                raise KeyboardInterrupt
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_q:
+                    raise KeyboardInterrupt
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    return text.strip()
+                elif event.key == pygame.K_BACKSPACE:
+                    text = text[:-1]
+                elif event.unicode and event.unicode.isprintable():
+                    text += event.unicode
+        time.sleep(0.01)  # 避免 CPU 空轉
+
+
+# ─────────────────────────────────────────────
+#  主程式
+# ─────────────────────────────────────────────
+
 if __name__ == "__main__":
 
-    #barcode_ascii = "MЗE ODB0A010 00"
-    #barcode_ascii = "XXXXJ102800309"
-    while(True):
-        #ch="Test Barcode"
-        ch = ""
-        ch = input('scan barcode\n')
-        if ch=="":
-            continue
-        print(f"{ch}")
-        current_timestamp = time.time()
-        filename = f"code_{int(current_timestamp)}"
-        my_code = Code128(ch, writer=ImageWriter())        
-        my_code.save(f"{filename}")
-        out = f"barcode_{filename}.mid"
+    init_display()
+    # 確保初始畫面渲染出來
+    pygame.event.pump()
+    pygame.display.flip()
 
-        barcode_ascii_to_midi(
-            ch,
-            out_path=out,
-            bpm=130,
-            scale="pentatonic",
-            base_note=50,
-            unit_beats=0.25,
-            program=81,
-        )
-        play_with_fluidsynth(mid_path=out)
+    print("=== 條碼掃描器已就緒，按 Q 離開 ===")
 
-        subprocess.run(["lp", "-o", "fit-to-page", f"./{filename}.png"])
+    try:
+        while True:
+            ch = read_barcode_from_events()
+            if ch == "":
+                continue
+
+            print(f"掃到: {ch}")
+            current_timestamp = time.time()
+            filename = f"code_{int(current_timestamp)}"
+
+            # 1. 生成條碼圖片
+            my_code = Code128(ch, writer=ImageWriter())
+            my_code.save(filename)
+            barcode_png = f"{filename}.png"
+
+            # 2. 合成到模板並全螢幕顯示
+            display_path = composite_barcode(barcode_png)
+            show_image_on_screen(display_path)
+
+            # 3. 播放 MIDI（blocking，但圖已寫入 framebuffer 不受影響）
+            mid_out = f"barcode_{filename}.mid"
+            try:
+                barcode_ascii_to_midi(ch, out_path=mid_out)
+                play_with_fluidsynth(mid_path=mid_out)
+            except Exception as e:
+                print(f"[MIDI 錯誤] {e}")
+
+            # 4. 列印
+#            try:
+#                subprocess.run(["lp", "-o", "fit-to-page", barcode_png])
+#            except Exception as e:
+#                print(f"[列印錯誤] {e}")
+
+    except KeyboardInterrupt:
+        print("離開。")
+    finally:
+        pygame.quit()
