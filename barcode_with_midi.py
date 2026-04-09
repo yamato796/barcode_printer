@@ -273,7 +273,7 @@ def show_image_on_screen(image_path: str):
 def pump_events():
     """清空 pygame 事件佇列，避免視窗被系統標記為無回應。"""
     for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_q and (pygame.key.get_mods() & pygame.KMOD_CTRL):
             raise KeyboardInterrupt
 
 
@@ -288,7 +288,7 @@ def read_barcode_from_events() -> str:
             if event.type == pygame.QUIT:
                 raise KeyboardInterrupt
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:
+                if event.key == pygame.K_q and (pygame.key.get_mods() & pygame.KMOD_CTRL):
                     raise KeyboardInterrupt
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     return text.strip()
