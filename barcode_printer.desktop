@@ -3,4 +3,3 @@ Type=Application
 Name=Barcode Printer
 Exec=/home/pi/barcode_project/launch.sh
 Path=/home/pi/barcode_project
-Terminal=false

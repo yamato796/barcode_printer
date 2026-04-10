@@ -201,9 +201,9 @@ def barcode_ascii_to_midi(
 
 def play_with_fluidsynth(mid_path: str, sf2_path: str = "/usr/share/sounds/sf2/FluidR3_GM.sf2"):
     #subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=hw:1", "-g", "1.0", sf2_path, mid_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    #subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=plughw:3", "-g", "1.0", sf2_path, mid_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    res = subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=plughw:3", "-g", "1.0", sf2_path, mid_path], check=True, capture_output=True, text=True)
-    print(res)
+    subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=plughw:3", "-g", "1.0", sf2_path, mid_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    #res = subprocess.run(["fluidsynth","-ni", "-a", "alsa", "-o", "audio.alsa.device=plughw:3", "-g", "1.0", sf2_path, mid_path], check=True, capture_output=True, text=True)
+    #print(res)
 # ─────────────────────────────────────────────
 #  全螢幕顯示
 # ─────────────────────────────────────────────
@@ -332,10 +332,11 @@ if __name__ == "__main__":
             show_image_on_screen(display_path)
 
             # 3. 列印
-#            try:
-#                subprocess.run(["lp","-o", "orientation-requested=6" ,"-o", "fit-to-page", display_path])
-#            except Exception as e:
-#                print(f"[列印錯誤] {e}")
+            try:
+                #subprocess.run(["lp","-o", "orientation-requested=3" ,"-o", "fit-to-page", display_path])
+                subprocess.run(["lp","-o", "orientation-requested=3" ,"-o" , "print-quality=5","-o", "fit-to-page", display_path])
+            except Exception as e:
+                print(f"[列印錯誤] {e}")
             
             # 4. 播放 MIDI（blocking，但圖已寫入 framebuffer 不受影響）
             mid_out = f"barcode_{filename}.mid"
